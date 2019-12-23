@@ -1,0 +1,32 @@
+{
+    "name": "pervozdanniy/translation-storage-manager",
+    "description": "Storage for translations",
+    "homepage": "http://dev-api.translate.center/api-docs/",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Danylo",
+            "email": "pervozadiy@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "^7.2",
+        "elasticsearch/elasticsearch": "^7.2"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "~2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Translate\\StorageManager\\": "src/"
+        }
+    },
+    "scripts": {
+        "cs": "php-cs-fixer fix -v --diff --dry-run",
+        "cs-fix": "php-cs-fixer fix -v --diff"
+    }
+}
