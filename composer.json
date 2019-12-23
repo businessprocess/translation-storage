@@ -1,5 +1,5 @@
 {
-    "name": "pervozdanniy/translation-storage-manager",
+    "name": "pervozdanniy/translation-storage",
     "description": "Storage for translations",
     "homepage": "http://dev-api.translate.center/api-docs/",
     "type": "library",
