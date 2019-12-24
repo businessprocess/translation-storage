@@ -2,10 +2,12 @@
 
 namespace Translate\StorageManager\Contracts;
 
-interface BulkActions
+interface Parser
 {
     /**
-     * @param array $data Compatible with [TranslationStorage::insert()]
+     * Returns array of items, compatible with [TranslationStorage::insert()]
+     * @param array $response
+     * @return array
      * @see TranslationStorage::insert()
      * ```php
      *  [
@@ -15,7 +17,12 @@ interface BulkActions
      *      'group' => 'string'
      *  ]
      * ```
+     */
+    public function parseBody(array $response): array;
+
+    /**
+     * @param array $response
      * @return bool
      */
-    public function bulkInsert(array $data): bool;
+    public function hasMore(array $response): bool;
 }

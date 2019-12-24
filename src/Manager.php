@@ -5,7 +5,9 @@ namespace Translate\StorageManager;
 use Generator;
 use Translate\StorageManager\Contracts\Api;
 use Translate\StorageManager\Contracts\BulkActions;
+use Translate\StorageManager\Contracts\Parser;
 use Translate\StorageManager\Contracts\TranslationStorage;
+use Translate\StorageManager\Response\Exception;
 
 class Manager
 {
@@ -20,17 +22,25 @@ class Manager
     protected $storage;
 
     /**
+     * @var Parser
+     */
+    protected $parser;
+
+    /**
      * @param Api $api
      * @param TranslationStorage $storage
+     * @param Parser|null $parser
      */
-    public function __construct(Api $api, TranslationStorage $storage)
+    public function __construct(Api $api, TranslationStorage $storage, Parser $parser = null)
     {
         $this->api = $api;
         $this->storage = $storage;
+        $this->parser = $parser ?? new Response\Parser();
     }
 
     /**
      * @param string|null $langs
+     * @throws Exception
      */
     public function update(string $langs = null): void
     {
@@ -50,43 +60,19 @@ class Manager
     /**
      * @param string|null $langs
      * @return Generator
+     * @throws Exception
      */
     protected function getItemsBatch(string $langs = null): Generator
     {
         $page = 0;
         do {
-            $resp = $this->api->fetch($langs, ++$page);
-            yield $this->processBatch($resp);
-        } while ($resp['meta']['totalPages'] > $resp['meta']['pageNum']);
-    }
-
-    /**
-     * @param array $data
-     * @return array
-     */
-    protected function processBatch(array $data): array
-    {
-        $body = [];
-        foreach ($data['items'] as $item) {
-            if (is_array($item['value'])) {
-                foreach ($item['value'] as $lang => $value) {
-                    $body[] = [
-                        'key' => $item['key'],
-                        'value' => $value,
-                        'lang' => $lang,
-                        'group' => $item['tags']
-                    ];
-                }
-            } else {
-                $body[] = [
-                    'key' => $item['key'],
-                    'value' => $item['value'],
-                    'lang' => reset($data['meta']['langs']),
-                    'group' => $item['tags']
-                ];
+            try {
+                $resp = $this->api->fetch($langs, ++$page);
+            } catch (\Throwable $exception) {
+                throw new Exception('Failed to fetch ' . $page . ' page for ' . $langs . ' languages due to: ' .
+                    $exception->getMessage(), $exception->getCode(), $exception);
             }
-        }
-
-        return $body;
+            yield $this->parser->parseBody($resp);
+        } while ($this->parser->hasMore($resp));
     }
 }
