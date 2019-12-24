@@ -11,7 +11,7 @@ interface TranslationStorage
      * @param string|null $group
      * @return bool
      */
-    public function insert(string $key, string $value, string $lang, string $group = null): bool;
+    public function set(string $key, string $value, string $lang, string $group = null): bool;
 
     /**
      * @param string $key

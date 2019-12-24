@@ -26,6 +26,7 @@ class ElasticSearch implements TranslationStorage, BulkActions
     {
         $this->client = $client;
         $this->processOptions($options);
+
         if (!$this->client->indices()->exists(['index' => $this->options['indexName']])) {
             $this->client->indices()->create([
                 'index' => $this->options['indexName'],
@@ -55,8 +56,22 @@ class ElasticSearch implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function insert(string $key, string $value, string $lang, string $group = null): bool
+    public function set(string $key, string $value, string $lang, string $group = null): bool
     {
+        $this->client->deleteByQuery([
+            'index' => $this->options['indexName'],
+            'body' => [
+                'query' => [
+                    'bool' => [
+                        'filter' => [
+                            'key' => $key,
+                            'lang' => $lang,
+                            'group' => $group
+                        ]
+                    ]
+                ]
+            ]
+        ]);
         $resp = $this->client->index([
             'index' => $this->options['indexName'],
             'body' => [
@@ -141,8 +156,13 @@ class ElasticSearch implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function bulkInsert(array $data): bool
+    public function bulkSet(array $data): bool
     {
+        $this->client->deleteByQuery(['index' => $this->options['indexName'], 'body' => [
+            'query' => [
+                'match_all' => ['boost' => 1.0]
+            ]
+        ]]);
         $body = [];
         foreach ($data as $item) {
             $body[] = ['index' => ['_index' => $this->options['indexName']]];

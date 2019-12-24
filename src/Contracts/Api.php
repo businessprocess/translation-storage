@@ -5,7 +5,7 @@ namespace Translate\StorageManager\Contracts;
 interface Api
 {
     /**
-     * @param string|null $langs
+     * @param array $params
      * @param int $page
      * @return array
      * ```php
@@ -23,5 +23,5 @@ interface Api
      *  ]
      * ```
      */
-    public function fetch(string $langs = null, int $page = 1): array;
+    public function fetch(array $params = [], int $page = 1): array;
 }

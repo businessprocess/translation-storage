@@ -6,7 +6,7 @@ interface BulkActions
 {
     /**
      * @param array $data Compatible with [TranslationStorage::insert()]
-     * @see TranslationStorage::insert()
+     * @see TranslationStorage::set()
      * ```php
      *  [
      *      'key' => 'string|required',
@@ -17,5 +17,5 @@ interface BulkActions
      * ```
      * @return bool
      */
-    public function bulkInsert(array $data): bool;
+    public function bulkSet(array $data): bool;
 }
