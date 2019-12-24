@@ -29,9 +29,9 @@ interface TranslationStorage
     /**
      * @param string $group
      * @param string $lang
-     * @return array|null
+     * @return array
      */
-    public function findByGroup(string $group, string $lang): ?array;
+    public function findByGroup(string $group, string $lang): array;
 
     /**
      * @param string $group

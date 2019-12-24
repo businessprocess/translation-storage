@@ -102,7 +102,7 @@ class ElasticSearch implements TranslationStorage, BulkActions
             ]
         ]]);
 
-        return $resp['hits']['hits']['_source']['value'] ?? null;
+        return $resp['hits']['hits'][0]['_source']['value'] ?? null;
     }
 
     /**
@@ -122,7 +122,7 @@ class ElasticSearch implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function findByGroup(string $group, string $lang): ?array
+    public function findByGroup(string $group, string $lang): array
     {
         $resp = $this->client->search(['index' => $this->options['indexName'], 'body' => [
             'query' => [
@@ -136,7 +136,18 @@ class ElasticSearch implements TranslationStorage, BulkActions
             ]
         ]]);
 
-        return $resp['hits']['hits']['_source']['value'] ?? null;
+        return $this->parseResults($resp['hits']['hits']);
+    }
+
+    /**
+     * @param array $hits
+     * @return array
+     */
+    protected function parseResults(array $hits): array
+    {
+        return array_map(static function (array $hit) {
+            return $hit['_source'];
+        }, $hits);
     }
 
     /**
