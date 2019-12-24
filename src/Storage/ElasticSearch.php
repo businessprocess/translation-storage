@@ -107,7 +107,7 @@ class ElasticSearch implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function group(string $group, string $lang): ?array
+    public function findByGroup(string $group, string $lang): ?array
     {
         $resp = $this->client->search(['index' => $this->options['indexName'], 'body' => [
             'query' => [

@@ -31,7 +31,7 @@ interface TranslationStorage
      * @param string $lang
      * @return array|null
      */
-    public function group(string $group, string $lang): ?array;
+    public function findByGroup(string $group, string $lang): ?array;
 
     /**
      * @param string $group
