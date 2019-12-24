@@ -1,6 +1,6 @@
 <?php
 
-namespace Storage;
+namespace Translate\StorageManager\Storage;
 
 use Elasticsearch\Client;
 use Translate\StorageManager\Contracts\BulkActions;
