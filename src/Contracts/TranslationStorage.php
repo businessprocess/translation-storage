@@ -11,7 +11,7 @@ interface TranslationStorage
      * @param string|null $group
      * @return bool
      */
-    public function set(string $key, string $value, string $lang, string $group = null): bool;
+    public function insert(string $key, string $value, string $lang, string $group = null): bool;
 
     /**
      * @param string $key
@@ -35,7 +35,14 @@ interface TranslationStorage
 
     /**
      * @param string $group
+     * @param string[]|null $langs Set null to drop all languages for specified group
      * @return bool
      */
-    public function deleteGroup(string $group): bool;
+    public function clearGroup(string $group, array $langs = null): bool;
+
+    /**
+     * @param string[]|null $langs Set null to drop ALL languages
+     * @return bool
+     */
+    public function clear(array $langs = null): bool;
 }

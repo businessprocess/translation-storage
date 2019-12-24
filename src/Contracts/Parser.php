@@ -8,7 +8,7 @@ interface Parser
      * Returns array of items, compatible with [TranslationStorage::insert()]
      * @param array $response
      * @return array
-     * @see TranslationStorage::set()
+     * @see TranslationStorage::insert()
      * ```php
      *  [
      *      'key' => 'string|required',

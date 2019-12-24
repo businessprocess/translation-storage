@@ -40,26 +40,27 @@ class Manager
     }
 
     /**
-     * @param string|null $langs
+     * @param string[] $langs
      * @param ProgressTracker|null $tracker
      * @throws Exception
      */
-    public function update(string $langs = null, ProgressTracker $tracker = null): void
+    public function update(array $langs, ProgressTracker $tracker = null): void
     {
-        $this->process(['langs' => $langs], $tracker);
+        $this->storage->clear($langs);
+        $this->process(['langs' => implode(',', $langs)], $tracker);
     }
 
     /**
      * @param string $group
-     * @param string|null $langs
+     * @param string[] $langs
      * @param ProgressTracker|null $tracker
      * @throws Exception
      */
-    public function updateGroup(string $group, string $langs = null, ProgressTracker $tracker = null): void
+    public function updateGroup(string $group, array $langs, ProgressTracker $tracker = null): void
     {
-        $this->storage->deleteGroup($group);
+        $this->storage->clearGroup($group, $langs);
         $params = [
-            'langs' => $langs,
+            'langs' => implode(',', $langs),
             'group' => $group
         ];
         $this->process($params, $tracker);
@@ -76,7 +77,7 @@ class Manager
         foreach ($this->getItemsBatch($params) as $batch) {
             if ($this->storage instanceof BulkActions) {
                 $track && $tracker->beforeBatch($batch);
-                $this->storage->bulkSet($batch);
+                $this->storage->bulkInsert($batch);
                 $track && $tracker->afterBatch($batch);
                 continue;
             }
@@ -85,8 +86,8 @@ class Manager
                 if (!isset($item['value']) && $item['value'] === null) {
                     continue;
                 }
-                $this->storage->set($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
-                $track && $tracker->afterBatch($item);
+                $this->storage->insert($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
+                $track && $tracker->afterItem($item);
             }
         }
     }

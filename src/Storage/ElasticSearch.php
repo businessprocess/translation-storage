@@ -56,22 +56,8 @@ class ElasticSearch implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function set(string $key, string $value, string $lang, string $group = null): bool
+    public function insert(string $key, string $value, string $lang, string $group = null): bool
     {
-        $this->client->deleteByQuery([
-            'index' => $this->options['indexName'],
-            'body' => [
-                'query' => [
-                    'bool' => [
-                        'filter' => [
-                            'key' => $key,
-                            'lang' => $lang,
-                            'group' => $group
-                        ]
-                    ]
-                ]
-            ]
-        ]);
         $resp = $this->client->index([
             'index' => $this->options['indexName'],
             'body' => [
@@ -153,12 +139,24 @@ class ElasticSearch implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function deleteGroup(string $group): bool
+    public function clearGroup(string $group, array $langs = null): bool
     {
+        $query = [
+            'bool' => [
+                'must' => [
+                    'term' => ['group' => $group],
+                ]
+            ],
+        ];
+        if ($langs !== null) {
+            foreach ($langs as $lang) {
+                $query['bool']['should'] = [
+                    'term' => ['lang' => $lang]
+                ];
+            }
+        }
         $resp = $this->client->deleteByQuery(['index' => $this->options['indexName'], 'body' => [
-            'query' => [
-                'term' => ['group' => $group]
-            ]
+            'query' => $query
         ]]);
 
         return empty($resp['failures']);
@@ -167,13 +165,8 @@ class ElasticSearch implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function bulkSet(array $data): bool
+    public function bulkInsert(array $data): bool
     {
-        $this->client->deleteByQuery(['index' => $this->options['indexName'], 'body' => [
-            'query' => [
-                'match_all' => ['boost' => 1.0]
-            ]
-        ]]);
         $body = [];
         foreach ($data as $item) {
             $body[] = ['index' => ['_index' => $this->options['indexName']]];
@@ -182,5 +175,28 @@ class ElasticSearch implements TranslationStorage, BulkActions
         $resp = $this->client->bulk(['body' => $body]);
 
         return $resp['errors'] === false;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function clear(array $langs = null): bool
+    {
+        if ($langs === null || empty($langs)) {
+            $query = ['match_all' => ['boost' => 1.0]];
+        } else {
+            foreach ($langs as $lang) {
+                $query['bool']['should'][] = [
+                    'term' => ['lang' => $lang]
+                ];
+            }
+        }
+
+        $this->client->deleteByQuery([
+            'index' => $this->options['indexName'],
+            'body' => ['query' => $query]
+        ]);
+
+        return true;
     }
 }
