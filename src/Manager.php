@@ -39,6 +39,9 @@ class Manager
                 $this->storage->bulkInsert($batch);
             }
             foreach ($batch as $item) {
+                if (!isset($item['value']) && $item['value'] === null) {
+                    continue;
+                }
                 $this->storage->insert($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
             }
         }
@@ -53,7 +56,37 @@ class Manager
         $page = 0;
         do {
             $resp = $this->api->fetch($langs, ++$page);
-            yield $resp['items'];
+            yield $this->processBatch($resp);
         } while ($resp['meta']['totalPages'] > $resp['meta']['pageNum']);
+    }
+
+    /**
+     * @param array $data
+     * @return array
+     */
+    protected function processBatch(array $data): array
+    {
+        $body = [];
+        foreach ($data['items'] as $item) {
+            if (is_array($item['value'])) {
+                foreach ($item['value'] as $lang => $value) {
+                    $body[] = [
+                        'key' => $item['key'],
+                        'value' => $value,
+                        'lang' => $lang,
+                        'group' => $item['tags']
+                    ];
+                }
+            } else {
+                $body[] = [
+                    'key' => $item['key'],
+                    'value' => $item['value'],
+                    'lang' => reset($data['meta']['langs']),
+                    'group' => $item['tags']
+                ];
+            }
+        }
+
+        return $body;
     }
 }

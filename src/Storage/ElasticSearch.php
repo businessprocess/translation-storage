@@ -43,6 +43,9 @@ class ElasticSearch implements TranslationStorage, BulkActions
         }
     }
 
+    /**
+     * @param array $options
+     */
     protected function processOptions(array $options): void
     {
         $options['indexName'] = $options['indexName'] ?? 'translation';
@@ -142,10 +145,10 @@ class ElasticSearch implements TranslationStorage, BulkActions
     {
         $body = [];
         foreach ($data as $item) {
-            $body[] = ['index' => []];
+            $body[] = ['index' => ['_index' => $this->options['indexName']]];
             $body[] = $item;
         }
-        $resp = $this->client->bulk(['index' => $this->options['indexName'], 'body' => $body]);
+        $resp = $this->client->bulk(['body' => $body]);
 
         return $resp['errors'] === false;
     }
