@@ -82,6 +82,7 @@ class Manager
      */
     protected function process(array $params): void
     {
+        $this->tracker !== null && $this->tracker->beforeStart();
         foreach ($this->getItemsBatch($params) as $batch) {
             if ($this->storage instanceof BulkActions) {
                 $this->storage->bulkInsert($batch);
@@ -94,6 +95,7 @@ class Manager
                 $this->storage->insert($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
             }
         }
+        $this->tracker !== null && $this->tracker->afterFinish();
     }
 
     /**
@@ -105,13 +107,14 @@ class Manager
     {
         $page = 0;
         do {
+            ++$page;
+            $this->tracker !== null && $this->tracker->beforeBatch($page);
             try {
-                $resp = $this->api->fetch($params, ++$page);
+                $resp = $this->api->fetch($params, $page);
             } catch (\Throwable $exception) {
                 throw new Exception('Failed to fetch ' . $page . ' page due to: ' .
                     $exception->getMessage(), $exception->getCode(), $exception);
             }
-            $this->tracker !== null && $this->tracker->beforeBatch($resp);
             yield $this->parser->parseBody($resp);
             $this->tracker !== null && $this->tracker->afterBatch($resp);
         } while ($this->parser->hasMore($resp));

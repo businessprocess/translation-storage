@@ -4,7 +4,11 @@ namespace Translate\StorageManager\Contracts;
 
 interface ProgressTracker
 {
-    public function beforeBatch(array &$response): void;
+    public function beforeStart(): void;
 
-    public function afterBatch(array &$response): void;
+    public function afterFinish(): void;
+
+    public function beforeBatch(int $page): void;
+
+    public function afterBatch(array $response): void;
 }
