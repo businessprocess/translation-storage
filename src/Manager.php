@@ -28,6 +28,11 @@ class Manager
     protected $parser;
 
     /**
+     * @var ProgressTracker|null
+     */
+    protected $tracker;
+
+    /**
      * @param Api $api
      * @param TranslationStorage $storage
      * @param Parser|null $parser
@@ -39,55 +44,54 @@ class Manager
         $this->parser = $parser ?? new Response\Parser();
     }
 
+    public function setTracker(ProgressTracker $tracker): Manager
+    {
+        $this->tracker = $tracker;
+
+        return $this;
+    }
+
     /**
      * @param string[] $langs
-     * @param ProgressTracker|null $tracker
      * @throws Exception
      */
-    public function update(array $langs, ProgressTracker $tracker = null): void
+    public function update(array $langs): void
     {
         $this->storage->clear($langs);
-        $this->process(['langs' => implode(',', $langs)], $tracker);
+        $this->process(['langs' => implode(',', $langs)]);
     }
 
     /**
      * @param string $group
      * @param string[] $langs
-     * @param ProgressTracker|null $tracker
      * @throws Exception
      */
-    public function updateGroup(string $group, array $langs, ProgressTracker $tracker = null): void
+    public function updateGroup(string $group, array $langs): void
     {
         $this->storage->clearGroup($group, $langs);
         $params = [
             'langs' => implode(',', $langs),
             'group' => $group
         ];
-        $this->process($params, $tracker);
+        $this->process($params);
     }
 
     /**
      * @param array $params
-     * @param ProgressTracker|null $tracker
      * @throws Exception
      */
-    protected function process(array $params, ProgressTracker $tracker = null): void
+    protected function process(array $params): void
     {
-        $track = $tracker !== null;
         foreach ($this->getItemsBatch($params) as $batch) {
             if ($this->storage instanceof BulkActions) {
-                $track && $tracker->beforeBatch($batch);
                 $this->storage->bulkInsert($batch);
-                $track && $tracker->afterBatch($batch);
                 continue;
             }
             foreach ($batch as $item) {
-                $track && $tracker->beforeItem($item);
                 if (!isset($item['value']) && $item['value'] === null) {
                     continue;
                 }
                 $this->storage->insert($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
-                $track && $tracker->afterItem($item);
             }
         }
     }
@@ -107,7 +111,9 @@ class Manager
                 throw new Exception('Failed to fetch ' . $page . ' page due to: ' .
                     $exception->getMessage(), $exception->getCode(), $exception);
             }
+            $this->tracker !== null && $this->tracker->beforeBatch($resp);
             yield $this->parser->parseBody($resp);
+            $this->tracker !== null && $this->tracker->afterBatch($resp);
         } while ($this->parser->hasMore($resp));
     }
 }
