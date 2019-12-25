@@ -71,7 +71,7 @@ class Manager
         $this->storage->clearGroup($group, $langs);
         $params = [
             'langs' => implode(',', $langs),
-            'group' => $group
+            'tags' => $group
         ];
         $this->process($params);
     }

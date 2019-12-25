@@ -6,7 +6,7 @@ use Elasticsearch\Client;
 use Translate\StorageManager\Contracts\BulkActions;
 use Translate\StorageManager\Contracts\TranslationStorage;
 
-class ElasticSearch implements TranslationStorage, BulkActions
+class ElasticStorage implements TranslationStorage, BulkActions
 {
     /**
      * @var Client
