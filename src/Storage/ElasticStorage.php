@@ -154,6 +154,9 @@ class ElasticStorage implements TranslationStorage, BulkActions
      */
     public function bulkInsert(array $data): bool
     {
+        if (empty($data)) {
+            return true;
+        }
         $body = [];
         foreach ($data as $item) {
             $body[] = ['index' => ['_index' => $this->options['indexName']]];
