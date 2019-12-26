@@ -74,14 +74,15 @@ class ElasticStorage implements TranslationStorage, BulkActions
     /**
      * @inheritDoc
      */
-    public function find(string $key, string $lang): ?string
+    public function find(string $key, string $lang, string $group): ?string
     {
         $resp = $this->client->search(['index' => $this->options['indexName'], 'body' => [
             'query' => [
                 'bool' => [
                     'filter' => [
                         ['term' => ['lang' => $lang]],
-                        ['term' => ['key' => $key]]
+                        ['term' => ['key' => $key]],
+                        ['term' => ['group' => $group]]
                     ],
                 ],
 
@@ -89,20 +90,6 @@ class ElasticStorage implements TranslationStorage, BulkActions
         ]]);
 
         return $resp['hits']['hits'][0]['_source']['value'] ?? null;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function delete(string $key): bool
-    {
-        $resp = $this->client->deleteByQuery(['index' => $this->options['indexName'], 'body' => [
-            'query' => [
-                'term' => ['key' => $key]
-            ]
-        ]]);
-
-        return empty($resp['failures']);
     }
 
     /**

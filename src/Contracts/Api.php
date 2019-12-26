@@ -14,7 +14,7 @@ interface Api
      *          'key' => 'string|required',
      *          'value' => 'string|required',
      *          'lang' => 'string|required',
-     *          'group' => 'string'
+     *          'group' => 'string|required'
      *       ],
      *      'meta' => [
      *          'totalPages' => 'int|required',

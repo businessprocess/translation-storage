@@ -8,23 +8,18 @@ interface TranslationStorage
      * @param string $key
      * @param string $value
      * @param string $lang
-     * @param string|null $group
+     * @param string $group
      * @return bool
      */
-    public function insert(string $key, string $value, string $lang, string $group = null): bool;
+    public function insert(string $key, string $value, string $lang, string $group): bool;
 
     /**
      * @param string $key
      * @param string $lang
+     * @param string $group
      * @return string|null
      */
-    public function find(string $key, string $lang): ?string;
-
-    /**
-     * @param string $key
-     * @return bool
-     */
-    public function delete(string $key): bool;
+    public function find(string $key, string $lang, string $group): ?string;
 
     /**
      * @param string $group

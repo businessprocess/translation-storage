@@ -14,7 +14,7 @@ interface Parser
      *      'key' => 'string|required',
      *      'value' => 'string|required',
      *      'lang' => 'string|required',
-     *      'group' => 'string'
+     *      'group' => 'string|required'
      *  ]
      * ```
      */
