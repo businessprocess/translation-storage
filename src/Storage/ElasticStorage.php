@@ -118,9 +118,12 @@ class ElasticStorage implements TranslationStorage, BulkActions
      */
     protected function parseResults(array $hits): array
     {
-        return array_map(static function (array $hit) {
-            return $hit['_source'];
-        }, $hits);
+        $result = [];
+        foreach ($hits as $hit) {
+            $result[$hit['_source']['key']] = $hit['_source']['value'];
+        }
+
+        return $result;
     }
 
     /**
