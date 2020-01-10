@@ -1,17 +1,15 @@
 Translate Storage Manager
 =============================
 
-[![Latest Stable Version](https://poser.pugx.org/pervozdanniy/translation-client/v/stable)](https://packagist.org/packages/pervozdanniy/translation-client)
-![Total Downloads](https://poser.pugx.org/pervozdanniy/translation-client/downloads)
+[![Latest Stable Version](https://poser.pugx.org/pervozdanniy/translation-storage/v/stable)](https://packagist.org/packages/pervozdanniy/translation-storage)
+![Total Downloads](https://poser.pugx.org/pervozdanniy/translation-storage/downloads)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
-
-Translate API is a PSR-compatible PHP HTTP client for working with translate API.
 
 [API Documentation](http://dev-api.translate.center/api-docs/)
 
 
 ## Installation
-The recommended way to install Translate API client is through
+The recommended way to install is through
 [Composer](http://getcomposer.org).
 
 ```bash
@@ -22,7 +20,7 @@ curl -sS https://getcomposer.org/installer | php
 Next, run the Composer command to install the latest stable version of Guzzle:
 
 ```bash
-composer require pervozdanniy/translation-client
+composer require pervozdanniy/translation-storage
 ```
 
 After installing, you need to require Composer's autoloader:
@@ -40,41 +38,40 @@ composer update
 
 ## Usage
 
+1. Create an api adapter
 ```php
-$options = [
-    'login' => '<YOUR_LOGIN>',
-    'password' => '<YOUR_PASSWORD>',
-];
-// you can pass any storage you want that implements \Psr\SimpleCache\CacheInterface
-$client = new \Translate\ApiClient($options, new \Translate\Storage\ArrayStorage);
-$response = $client->request('GET', 'users');
-
-echo $response->getStatusCode(); # 200
-echo $response->getHeaderLine('content-type'); # 'application/json; charset=utf8'
-echo $response->getBody(); # '{"items": [{"uuid": ...}'
+class ApiAdapter implements \Translate\StorageManager\Contracts\Api
+{
+    // MUST return data compatible with storage's data structure
+    public function fetch(array $params = [], int $page = 1) : array
+    {
+        // TODO: Implement fetch() method.
+        return [];
+    }
+}
 ```
 
-#### Aliases
-Client also resolves aliases, received from login request:
+2. Initialize Storage Manager
 ```php
-$response = $client->request('GET', 'users/{userUuid}/projects');
-```
-For authenticated user 2 aliases are available by default:
-`userUuid` and `authToken`
+/** @var \Translate\StorageManager\Contracts\Api $api */
+$api = new ApiAdapter();
 
-
-You can add your own aliases using:
-```php
-$client->setAlias('projectUuid', '<PROJECT_UUID>');
-// use user-defined alias
-$response = $client->request('GET', 'projects/{projectUuid}/languages');
+$builder = \Elasticsearch\ClientBuilder::create();
+// set all options for elastic client you need
+$elastic = $builder->build();
+$storage = new \Translate\StorageManager\Storage\ElasticStorage($elastic);
+// you can pass any storage you want that implements \Translate\StorageManager\Contracts\TranslationStorage interface
+$manager = new \Translate\StorageManager\Manager($api, $storage);
+$manager->update(['en', 'es', 'ru']);
 ```
 
-#### Available Options
+3. Update your translations whenever you need
+```php
+/** @var \Translate\StorageManager\Manager $manager*/
+//update all translation groups for specified languages
+$manager->update(['en', 'es', 'ru']);
 
-| Option      | Description                                                      | Default value                           | 
-|-------------|------------------------------------------------------------------|-----------------------------------------|
-| login       | Your API login (required)                                        | null                                    |
-| password    | Your API password (required)                                     | null                                    |
-| api         | API base uri                                                     | http://dev-api.translate.center/api/v1/ |
-| maxAttempts | Number of attempts to reauthenticate to API on 401 response code | 3                                       |
+//update specified group
+$manager->updateGroup('app', ['en', 'es', 'ru']);
+
+```

@@ -23,6 +23,25 @@ class Manager
     protected $storage;
 
     /**
+     * @return TranslationStorage
+     */
+    public function getStorage(): TranslationStorage
+    {
+        return $this->storage;
+    }
+
+    /**
+     * @param TranslationStorage $storage
+     * @return Manager
+     */
+    public function setStorage(TranslationStorage $storage): Manager
+    {
+        $this->storage = $storage;
+
+        return $this;
+    }
+
+    /**
      * @var Parser
      */
     protected $parser;
@@ -31,6 +50,18 @@ class Manager
      * @var ProgressTracker|null
      */
     protected $tracker;
+
+    public function getTracker(): ProgressTracker
+    {
+        return $this->tracker;
+    }
+
+    public function setTracker(ProgressTracker $tracker): Manager
+    {
+        $this->tracker = $tracker;
+
+        return $this;
+    }
 
     /**
      * @param Api $api
@@ -42,13 +73,6 @@ class Manager
         $this->api = $api;
         $this->storage = $storage;
         $this->parser = $parser ?? new Response\Parser();
-    }
-
-    public function setTracker(ProgressTracker $tracker): Manager
-    {
-        $this->tracker = $tracker;
-
-        return $this;
     }
 
     /**
