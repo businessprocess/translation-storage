@@ -4,10 +4,13 @@ namespace Translate\StorageManager\Storage;
 
 use Elasticsearch\Client;
 use Translate\StorageManager\Contracts\BulkActions;
+use Translate\StorageManager\Contracts\Searchable;
 use Translate\StorageManager\Contracts\TranslationStorage;
 
-class ElasticStorage implements TranslationStorage, BulkActions
+class ElasticStorage implements TranslationStorage, BulkActions, Searchable
 {
+    protected const BATCH_SIZE = 500;
+
     /**
      * @var Client
      */
@@ -97,19 +100,31 @@ class ElasticStorage implements TranslationStorage, BulkActions
      */
     public function findByGroup(string $group, string $lang): array
     {
-        $resp = $this->client->search(['index' => $this->options['indexName'], 'body' => [
-            'query' => [
-                'bool' => [
-                    'filter' => [
-                        ['term' => ['lang' => $lang]],
-                        ['term' => ['group' => $group]]
-                    ],
-                ],
+        $from = 0;
+        do {
+            $resp = $this->client->search([
+                'index' => $this->options['indexName'],
+                'size' => static::BATCH_SIZE,
+                'from' => $from,
+                'body' => [
+                    'query' => [
+                        'bool' => [
+                            'filter' => [
+                                ['term' => ['lang' => $lang]],
+                                ['term' => ['group' => $group]]
+                            ],
+                        ],
 
-            ]
-        ]]);
+                    ]
+                ]
+            ]);
+            $result = [];
+            foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
+                $result[$key] = $value;
+            }
+        } while ($resp['hits']['total']['value'] > $from += static::BATCH_SIZE);
 
-        return $this->parseResults($resp['hits']['hits']);
+        return $result;
     }
 
     /**
@@ -191,5 +206,46 @@ class ElasticStorage implements TranslationStorage, BulkActions
         ]);
 
         return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function search(string $query, string $lang, string $group = null): array
+    {
+        $filter = [
+            ['term' => ['lang' => $lang]]
+        ];
+        if ($group !== null) {
+            $filter[] = ['term' => ['group' => $group]];
+        }
+        $from = 0;
+        do {
+            $resp = $this->client->search([
+                'index' => $this->options['indexName'],
+                'from' => $from,
+                'size' => static::BATCH_SIZE,
+                'body' => [
+                    'query' => [
+                        'bool' => [
+                            'must' => [
+                                ['match' => [
+                                    'value' => [
+                                        'query' => $query
+                                    ]
+                                ]],
+                            ],
+                            'filter' => $filter
+                        ],
+                    ]
+                ]
+            ]);
+            $result = [];
+            foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
+                $result[$key] = $value;
+            }
+        } while ($resp['hits']['total']['value'] > $from += static::BATCH_SIZE);
+
+        return $result;
     }
 }
