@@ -9,7 +9,7 @@ use Translate\StorageManager\Contracts\TranslationStorage;
 
 class ElasticStorage implements TranslationStorage, BulkActions, Searchable
 {
-    protected const BATCH_SIZE = 500;
+    protected const DEFAULT_BATCH_SIZE = 500;
 
     /**
      * @var Client
@@ -53,6 +53,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
     protected function processOptions(array $options): void
     {
         $options['indexName'] = $options['indexName'] ?? 'translation';
+        $options['batchSize'] = $options['batchSize'] ?? static::DEFAULT_BATCH_SIZE;
         $this->options = $options;
     }
 
@@ -105,7 +106,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         do {
             $resp = $this->client->search([
                 'index' => $this->options['indexName'],
-                'size' => static::BATCH_SIZE,
+                'size' => $this->options['batchSize'],
                 'from' => $from,
                 'body' => [
                     'query' => [
@@ -122,7 +123,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
             foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
                 $result[$key] = $value;
             }
-        } while ($resp['hits']['total']['value'] > $from += static::BATCH_SIZE);
+        } while ($resp['hits']['total']['value'] > $from += $this->options['batchSize']);
 
         return $result;
     }
@@ -224,8 +225,8 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         do {
             $resp = $this->client->search([
                 'index' => $this->options['indexName'],
+                'size' => $this->options['batchSize'],
                 'from' => $from,
-                'size' => static::BATCH_SIZE,
                 'body' => [
                     'query' => [
                         'bool' => [
@@ -242,7 +243,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
             foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
                 $result[$key] = $value;
             }
-        } while ($resp['hits']['total']['value'] > $from += static::BATCH_SIZE);
+        } while ($resp['hits']['total']['value'] > $from += $this->options['batchSize']);
 
         return $result;
     }
