@@ -101,6 +101,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
     public function findByGroup(string $group, string $lang): array
     {
         $from = 0;
+        $result = [];
         do {
             $resp = $this->client->search([
                 'index' => $this->options['indexName'],
@@ -118,7 +119,6 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
                     ]
                 ]
             ]);
-            $result = [];
             foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
                 $result[$key] = $value;
             }
@@ -220,6 +220,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
             $filter[] = ['term' => ['group' => $group]];
         }
         $from = 0;
+        $result = [];
         do {
             $resp = $this->client->search([
                 'index' => $this->options['indexName'],
@@ -238,7 +239,6 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
                     ]
                 ]
             ]);
-            $result = [];
             foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
                 $result[$key] = $value;
             }
