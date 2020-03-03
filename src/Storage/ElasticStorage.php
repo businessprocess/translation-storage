@@ -222,6 +222,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         }
         $from = 0;
         $result = [];
+        $query = str_replace('-', ' ',$query);
         do {
             $resp = $this->client->search([
                 'index' => $this->options['indexName'],
@@ -232,7 +233,8 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
                         'bool' => [
                             'must' => [
                                 ['query_string' => [
-                                    'query' => "value:*{$query}*"
+                                    'query' => "value:*{$query}*",
+                                    'minimum_should_match' => '100%',
                                 ]],
                             ],
                             'filter' => $filter
