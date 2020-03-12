@@ -233,8 +233,10 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
                         'bool' => [
                             'must' => [
                                 ['query_string' => [
-                                    'query' => "value:*{$query}*",
+                                    'query' => "*{$query}*",
                                     'minimum_should_match' => '100%',
+                                    'analyze_wildcard' => true,
+                                    'fields' => ['value']
                                 ]],
                             ],
                             'filter' => $filter
