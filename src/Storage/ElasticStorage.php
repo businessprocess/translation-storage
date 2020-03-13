@@ -260,7 +260,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         $charList = '+-=&|!(){}[]^"~*?:\\/';
 
         return addcslashes(
-            str_replace(['<', '>'], '', trim($string, $charList)),
+            str_replace(['<', '>', '-', '*'], ['', '', ' ', ' '], trim($string, $charList)),
             $charList
         );
     }
