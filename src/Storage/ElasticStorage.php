@@ -222,7 +222,6 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         }
         $from = 0;
         $result = [];
-        $query = str_replace('-', ' ',$query);
         do {
             $resp = $this->client->search([
                 'index' => $this->options['indexName'],
@@ -233,10 +232,10 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
                         'bool' => [
                             'must' => [
                                 ['query_string' => [
-                                    'query' => "*{$query}*",
+                                    'query' => "*{$this->escape($query)}*",
                                     'minimum_should_match' => '100%',
                                     'analyze_wildcard' => true,
-                                    'fields' => ['value']
+                                    'fields' => ['value'],
                                 ]],
                             ],
                             'filter' => $filter
@@ -250,5 +249,19 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         } while ($resp['hits']['total']['value'] > $from += $this->options['batchSize']);
 
         return $result;
+    }
+
+    /**
+     * @param string $string
+     * @return string
+     */
+    private function escape(string $string): string
+    {
+        $charList = '+-=&|!(){}[]^"~*?:\\/';
+
+        return addcslashes(
+            str_replace(['<', '>'], '', trim($string, $charList)),
+            $charList
+        );
     }
 }
