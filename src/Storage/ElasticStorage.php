@@ -54,6 +54,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
     {
         $options['indexName'] = $options['indexName'] ?? 'translation';
         $options['batchSize'] = $options['batchSize'] ?? static::DEFAULT_BATCH_SIZE;
+        $options['refresh'] = $options['refresh'] ?? false;
         $this->options = $options;
     }
 
@@ -64,6 +65,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
     {
         $resp = $this->client->index([
             'index' => $this->options['indexName'],
+            'refresh' => $this->options['refresh'],
             'body' => [
                 'key' => $key,
                 'value' => $value,
@@ -181,7 +183,10 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
             $body[] = ['index' => ['_index' => $this->options['indexName']]];
             $body[] = $item;
         }
-        $resp = $this->client->bulk(['body' => $body]);
+        $resp = $this->client->bulk([
+            'refresh' => $this->options['refresh'],
+            'body' => $body
+        ]);
 
         return $resp['errors'] === false;
     }

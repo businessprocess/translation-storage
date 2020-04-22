@@ -75,3 +75,12 @@ $manager->update(['en', 'es', 'ru']);
 $manager->updateGroup('app', ['en', 'es', 'ru']);
 
 ```
+
+
+### Configuration Options
+
+| Option      | Description                                                                                                                                               | Default value                           | 
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------|
+| indexName   | Name of index created in Elasticsearch                                                                                                                    | `translation`                           |
+| batchSize   | Number fo results storage fetching from Elasticsearch on  `findByGroup` and `search` methods                                                              | `500`                                   |
+| refresh     | [refresh option](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-refresh.html) for `insert` and `bulkInsert` methods   | `false`                                 |
