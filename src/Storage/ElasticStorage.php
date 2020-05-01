@@ -252,8 +252,7 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
     private function prepareMustClause(string $query): array
     {
         $must = [];
-        $query = $this->escape(mb_strtolower($query));
-        foreach (array_unique(array_filter(explode(' ', $query))) as $term) {
+        foreach (array_unique(array_filter(explode(' ', $this->escape($query)))) as $term) {
             $must[] = [
                 'wildcard' => [
                     'value' => [
@@ -289,8 +288,6 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
      */
     private function escape(string $string): string
     {
-        $charList = '+-=&|!(){}[]^"~*?:\\/<>%';
-
-        return addcslashes(str_replace(str_split($charList), ' ', $string), $charList);
+        return mb_ereg_replace('[^\w\p{Cyrillic},]', ' ', mb_strtolower($string));
     }
 }
