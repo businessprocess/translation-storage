@@ -219,34 +219,22 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
      */
     public function search(string $query, string $lang, string $group = null): array
     {
-        $filter = [
-            ['term' => ['lang' => $lang]]
-        ];
-        if ($group !== null) {
-            $filter[] = ['term' => ['group' => $group]];
-        }
         $from = 0;
         $result = [];
+        $body = [
+            'query' => [
+                'bool' => [
+                    'must' => $this->prepareMustClause($query),
+                    'filter' => $this->prepareFilterClause($lang, $group)
+                ]
+            ],
+        ];
         do {
             $resp = $this->client->search([
                 'index' => $this->options['indexName'],
                 'size' => $this->options['batchSize'],
                 'from' => $from,
-                'body' => [
-                    'query' => [
-                        'bool' => [
-                            'must' => [
-                                ['query_string' => [
-                                    'query' => "*{$this->escape($query)}*",
-                                    'minimum_should_match' => '100%',
-                                    'analyze_wildcard' => true,
-                                    'fields' => ['value'],
-                                ]],
-                            ],
-                            'filter' => $filter
-                        ],
-                    ]
-                ]
+                'body' => $body
             ]);
             foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
                 $result[$key] = $value;
@@ -256,17 +244,53 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         return $result;
     }
 
+
+    /**
+     * @param string $query
+     * @return array
+     */
+    private function prepareMustClause(string $query): array
+    {
+        $must = [];
+        $query = $this->escape(mb_strtolower($query));
+        foreach (array_unique(array_filter(explode(' ', $query))) as $term) {
+            $must[] = [
+                'wildcard' => [
+                    'value' => [
+                        'value' => "*$term*"
+                    ]
+                ]
+            ];
+        }
+
+        return $must;
+    }
+
+    /**
+     * @param string $lang
+     * @param string|null $group
+     * @return array
+     */
+    private function prepareFilterClause(string $lang, string $group = null): array
+    {
+        $filter = [
+            ['term' => ['lang' => $lang]]
+        ];
+        if ($group !== null) {
+            $filter[] = ['term' => ['group' => $group]];
+        }
+
+        return $filter;
+    }
+
     /**
      * @param string $string
      * @return string
      */
     private function escape(string $string): string
     {
-        $charList = '+-=&|!(){}[]^"~*?:\\/';
+        $charList = '+-=&|!(){}[]^"~*?:\\/<>%';
 
-        return addcslashes(
-            str_replace(['<', '>', '-', '*'], ['', '', ' ', ' '], trim($string, $charList)),
-            $charList
-        );
+        return addcslashes(str_replace(str_split($charList), ' ', $string), $charList);
     }
 }
