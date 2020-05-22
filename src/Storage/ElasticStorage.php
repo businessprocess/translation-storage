@@ -63,6 +63,25 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
      */
     public function insert(string $key, string $value, string $lang, string $group = null): bool
     {
+        $update = $this->client->updateByQuery([
+            'index' => $this->options['indexName'],
+            // 'refresh' => $this->options['refresh'] !== false,
+            'body' => [
+                'query' => [
+                    'bool' => [
+                        'filter' => [
+                            ['term' => ['lang' => $lang]],
+                            ['term' => ['key' => $key]],
+                            ['term' => ['group' => $group]]
+                        ],
+                    ],
+
+                ]
+            ],
+        ]);
+        if ($update['updated'] === 1) {
+            return true;
+        }
         $resp = $this->client->index([
             'index' => $this->options['indexName'],
             'refresh' => $this->options['refresh'],
