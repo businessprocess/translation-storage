@@ -76,6 +76,13 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
                         ],
                     ],
 
+                ],
+                'script' => [
+                    'source' => 'ctx._source.value=params.value',
+                    'params' => [
+                        'value' => $value
+                    ],
+                    'lang' => 'painless'
                 ]
             ],
         ]);
