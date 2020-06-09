@@ -3,11 +3,16 @@
 namespace Translate\StorageManager\Storage;
 
 use Elasticsearch\Client;
+use Elasticsearch\Common\Exceptions\Missing404Exception;
+use InvalidArgumentException;
 use Translate\StorageManager\Contracts\BulkActions;
-use Translate\StorageManager\Contracts\Searchable;
 use Translate\StorageManager\Contracts\TranslationStorage;
+use function array_key_exists;
+use function array_map;
+use function count;
+use function is_array;
 
-class ElasticStorage implements TranslationStorage, BulkActions, Searchable
+class SpreadIndexElasticStorage implements TranslationStorage, BulkActions
 {
     protected const DEFAULT_BATCH_SIZE = 500;
 
@@ -22,28 +27,16 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
     protected $options;
 
     /**
-     * @param Client $client
-     * @param array $options
+     * @var array|null
      */
+    private $indices;
+
     public function __construct(Client $client, array $options = [])
     {
         $this->client = $client;
         $this->processOptions($options);
-
-        if (!$this->client->indices()->exists(['index' => $this->options['indexName']])) {
-            $this->client->indices()->create([
-                'index' => $this->options['indexName'],
-                'body' => [
-                    'mappings' => [
-                        'properties' => [
-                            'key' => ['type' => 'keyword'],
-                            'value' => ['type' => 'text', 'index_options' => 'freqs'],
-                            'lang' => ['type' => 'keyword'],
-                            'group' => ['type' => 'keyword']
-                        ]
-                    ]
-                ],
-            ]);
+        foreach ($this->options['indices'] as $name => $config) {
+            $this->ensureIndex($name, $config);
         }
     }
 
@@ -52,148 +45,143 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
      */
     protected function processOptions(array $options): void
     {
-        $options['indexName'] = $options['indexName'] ?? 'translation';
+        if (!isset($options['indices']) || !is_array($options['indices'])) {
+            throw new InvalidArgumentException('Option \'indices is required and should be an array\'');
+        }
+        $options['prefix'] = $options['prefix'] ?? '';
         $options['batchSize'] = $options['batchSize'] ?? static::DEFAULT_BATCH_SIZE;
+        $options['batchTimeout'] = $options['batchTimeout'] ?? '10s';
         $options['refresh'] = $options['refresh'] ?? false;
         $this->options = $options;
     }
 
     /**
+     * @param string $name
+     * @param array $config
+     */
+    protected function ensureIndex(string $name, array $config): void
+    {
+        if ($this->indices === null) {
+            $this->indices = $this->client->cat()->indices(['index' => $this->options['prefix'] . '*', 'format' => 'json']);
+        }
+        $indexName = $this->options['prefix'] . $name;
+        foreach ($this->indices as $info) {
+            $info['index'] === $indexName && $this->client->indices()->create([
+                'index' => $indexName,
+                'body' => $config
+            ]);
+        }
+    }
+
+    /**
      * @inheritDoc
      */
-    public function insert(string $key, string $value, string $lang, string $group = null): bool
+    public function insert(string $index, array $fields): bool
     {
-        $update = $this->client->updateByQuery([
-            'index' => $this->options['indexName'],
-            // 'refresh' => $this->options['refresh'] !== false,
-            'body' => [
-                'query' => [
-                    'bool' => [
-                        'filter' => [
-                            ['term' => ['lang' => $lang]],
-                            ['term' => ['key' => $key]],
-                            ['term' => ['group' => $group]]
-                        ],
-                    ],
+        if (!array_key_exists('id', $fields) || !array_key_exists('lang', $fields)) {
+            throw new InvalidArgumentException('$fields MUST contain both \'id\' and \'lang\' keys');
+        }
 
-                ],
-                'script' => [
-                    'source' => 'ctx._source.value=params.value',
-                    'params' => [
-                        'value' => $value
-                    ],
-                    'lang' => 'painless'
-                ]
+        $update = $this->client->update([
+            'index' => $this->options['prefix'] . $index,
+            'id' => $fields['lang'] . '.' . $fields['id'],
+            'body' => [
+                'doc' => $fields
             ],
         ]);
-        if ($update['updated'] === 1) {
-            return true;
-        }
-        $resp = $this->client->index([
-            'index' => $this->options['indexName'],
-            'refresh' => $this->options['refresh'],
-            'body' => [
-                'key' => $key,
-                'value' => $value,
-                'lang' => $lang,
-                'group' => $group
-            ]
-        ]);
 
-        return isset($resp['result']) && $resp['result'] === 'created';
+        return $update['result'] === 'updated' || $update['result'] === 'noop';
     }
 
     /**
      * @inheritDoc
      */
-    public function find(string $key, string $lang, string $group): ?string
+    public function find(string $id, string $lang, string $index = null): ?array
     {
-        $resp = $this->client->search(['index' => $this->options['indexName'], 'body' => [
-            'query' => [
-                'bool' => [
-                    'filter' => [
-                        ['term' => ['lang' => $lang]],
-                        ['term' => ['key' => $key]],
-                        ['term' => ['group' => $group]]
-                    ],
-                ],
+        try {
+            $resp = $this->client->get([
+                'index' => $this->options['prefix'] . ($index ?? '*'),
+                'id' => $lang . '.' . $id,
+            ]);
+        } catch (Missing404Exception $exception) {
+            return null;
+        }
 
-            ]
+        return $resp['_source'];
+    }
+
+    /**
+     * @inheritDoc
+     * @return \Generator
+     */
+    public function fetch(array $langs = null, string $index = null): iterable
+    {
+        $body = ['query' => $this->prepareLangsQuery($langs)];
+        $resp = $this->client->search([
+            'index' => $this->options['prefix'] . ($index ?? '*'),
+            'size' => $this->options['batchSize'],
+            'scroll' => $this->options['batchTimeout'],
+            'body' => $body,
+        ]);
+        $fetched = count($resp['hits']['hits']);
+        yield $this->processHits($resp['hits']['hits']);
+        if ($fetched >= $resp['hits']['total']['value']) {
+            return $fetched;
+        }
+        do {
+            $resp = $this->client->scroll([
+                'scroll_id' => $resp['_scroll_id'],
+                'scroll' => $this->options['batchTimeout'],
+            ]);
+            yield $this->processHits($resp['hits']['hits']);
+        } while ($resp['hits']['total']['value'] > $fetched += count($resp['hits']['hits']));
+        $this->client->clearScroll(['body' => [
+            'scroll_id' => $resp['_scroll_id']
         ]]);
 
-        return $resp['hits']['hits'][0]['_source']['value'] ?? null;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function findByGroup(string $group, string $lang): array
-    {
-        $from = 0;
-        $result = [];
-        do {
-            $resp = $this->client->search([
-                'index' => $this->options['indexName'],
-                'size' => $this->options['batchSize'],
-                'from' => $from,
-                'body' => [
-                    'query' => [
-                        'bool' => [
-                            'filter' => [
-                                ['term' => ['lang' => $lang]],
-                                ['term' => ['group' => $group]]
-                            ],
-                        ],
-
-                    ]
-                ]
-            ]);
-            foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
-                $result[$key] = $value;
-            }
-        } while ($resp['hits']['total']['value'] > $from += $this->options['batchSize']);
-
-        return $result;
+        return $fetched;
     }
 
     /**
      * @param array $hits
      * @return array
      */
-    protected function parseResults(array $hits): array
+    protected function processHits(array $hits): array
     {
-        $result = [];
-        foreach ($hits as $hit) {
-            $result[$hit['_source']['key']] = $hit['_source']['value'];
+        return array_map(static function (array $hit): array {
+            return $hit['_source'];
+        }, $hits);
+    }
+
+    /**
+     * @param array|null $langs
+     * @return array
+     */
+    protected function prepareLangsQuery(array $langs = null): array
+    {
+        if ($langs === null || empty($langs)) {
+            return ['match_all' => ['boost' => 1.0]];
+        }
+        $query = [];
+        foreach ($langs as $lang) {
+            $query['bool']['should'][] = [
+                'term' => ['lang' => $lang]
+            ];
         }
 
-        return $result;
+        return $query;
     }
 
     /**
      * @inheritDoc
      */
-    public function clearGroup(string $group, array $langs = null): bool
+    public function clear(array $langs = null, string $index = null): void
     {
-        $query = [
-            'bool' => [
-                'must' => [
-                    'term' => ['group' => $group],
-                ]
-            ],
-        ];
-        if ($langs !== null) {
-            foreach ($langs as $lang) {
-                $query['bool']['should'] = [
-                    'term' => ['lang' => $lang]
-                ];
-            }
-        }
-        $resp = $this->client->deleteByQuery(['index' => $this->options['indexName'], 'body' => [
-            'query' => $query
-        ]]);
-
-        return empty($resp['failures']);
+        $this->client->deleteByQuery([
+            'index' => $this->options['prefix'] . ($index ?? '*'),
+            'slices' => 'auto',
+            'body' => ['query' => $this->prepareLangsQuery($langs)],
+        ]);
     }
 
     /**
@@ -215,105 +203,5 @@ class ElasticStorage implements TranslationStorage, BulkActions, Searchable
         ]);
 
         return $resp['errors'] === false;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function clear(array $langs = null): bool
-    {
-        if ($langs === null || empty($langs)) {
-            $query = ['match_all' => ['boost' => 1.0]];
-        } else {
-            foreach ($langs as $lang) {
-                $query['bool']['should'][] = [
-                    'term' => ['lang' => $lang]
-                ];
-            }
-        }
-
-        $this->client->deleteByQuery([
-            'index' => $this->options['indexName'],
-            'body' => ['query' => $query]
-        ]);
-
-        return true;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function search(string $query, string $lang, string $group = null): array
-    {
-        $from = 0;
-        $result = [];
-        $body = [
-            'query' => [
-                'bool' => [
-                    'must' => $this->prepareMustClause($query),
-                    'filter' => $this->prepareFilterClause($lang, $group)
-                ]
-            ],
-        ];
-        do {
-            $resp = $this->client->search([
-                'index' => $this->options['indexName'],
-                'size' => $this->options['batchSize'],
-                'from' => $from,
-                'body' => $body
-            ]);
-            foreach ($this->parseResults($resp['hits']['hits']) as $key => $value) {
-                $result[$key] = $value;
-            }
-        } while ($resp['hits']['total']['value'] > $from += $this->options['batchSize']);
-
-        return $result;
-    }
-
-
-    /**
-     * @param string $query
-     * @return array
-     */
-    private function prepareMustClause(string $query): array
-    {
-        $must = [];
-        foreach (array_unique(array_filter(explode(' ', $this->escape($query)))) as $term) {
-            $must[] = [
-                'wildcard' => [
-                    'value' => [
-                        'value' => "*$term*"
-                    ]
-                ]
-            ];
-        }
-
-        return $must;
-    }
-
-    /**
-     * @param string $lang
-     * @param string|null $group
-     * @return array
-     */
-    private function prepareFilterClause(string $lang, string $group = null): array
-    {
-        $filter = [
-            ['term' => ['lang' => $lang]]
-        ];
-        if ($group !== null) {
-            $filter[] = ['term' => ['group' => $group]];
-        }
-
-        return $filter;
-    }
-
-    /**
-     * @param string $string
-     * @return string
-     */
-    private function escape(string $string): string
-    {
-        return mb_ereg_replace('[^\w\p{Cyrillic},]', ' ', mb_strtolower($string));
     }
 }
