@@ -5,17 +5,15 @@ namespace Translate\StorageManager\Storage;
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Missing404Exception;
 use InvalidArgumentException;
-use Translate\StorageManager\Contracts\BulkActions;
-use Translate\StorageManager\Contracts\TranslationStorage;
+use Translate\StorageManager\Contracts\Bulk;
+use Translate\StorageManager\Contracts\Storage;
 use function array_key_exists;
 use function array_map;
 use function count;
 use function is_array;
 
-class SpreadIndexElasticStorage implements TranslationStorage, BulkActions
+class ElasticStorage implements Storage, Bulk
 {
-    protected const DEFAULT_BATCH_SIZE = 500;
-
     /**
      * @var Client
      */
@@ -49,7 +47,7 @@ class SpreadIndexElasticStorage implements TranslationStorage, BulkActions
             throw new InvalidArgumentException('Option \'indices is required and should be an array\'');
         }
         $options['prefix'] = $options['prefix'] ?? '';
-        $options['batchSize'] = $options['batchSize'] ?? static::DEFAULT_BATCH_SIZE;
+        $options['batchSize'] = $options['batchSize'] ?? 500;
         $options['batchTimeout'] = $options['batchTimeout'] ?? '10s';
         $options['refresh'] = $options['refresh'] ?? false;
         $this->options = $options;
@@ -193,8 +191,11 @@ class SpreadIndexElasticStorage implements TranslationStorage, BulkActions
             return true;
         }
         $body = [];
-        foreach ($data as $item) {
-            $body[] = ['index' => ['_index' => $this->options['indexName']]];
+        foreach ($data as $index => $item) {
+            $body[] = ['index' => [
+                '_index' => $this->options['prefix'] . $index,
+                '_id' => $item['lang'] . '.' . $item['id']
+            ]];
             $body[] = $item;
         }
         $resp = $this->client->bulk([

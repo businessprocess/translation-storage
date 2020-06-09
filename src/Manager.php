@@ -3,12 +3,14 @@
 namespace Translate\StorageManager;
 
 use Generator;
+use Throwable;
 use Translate\StorageManager\Contracts\Api;
-use Translate\StorageManager\Contracts\BulkActions;
+use Translate\StorageManager\Contracts\Bulk;
 use Translate\StorageManager\Contracts\Parser;
 use Translate\StorageManager\Contracts\ProgressTracker;
-use Translate\StorageManager\Contracts\TranslationStorage;
+use Translate\StorageManager\Contracts\Storage;
 use Translate\StorageManager\Response\Exception;
+use function implode;
 
 class Manager
 {
@@ -18,23 +20,23 @@ class Manager
     protected $api;
 
     /**
-     * @var TranslationStorage
+     * @var Storage
      */
     protected $storage;
 
     /**
-     * @return TranslationStorage
+     * @return Storage
      */
-    public function getStorage(): TranslationStorage
+    public function getStorage(): Storage
     {
         return $this->storage;
     }
 
     /**
-     * @param TranslationStorage $storage
+     * @param Storage $storage
      * @return Manager
      */
-    public function setStorage(TranslationStorage $storage): Manager
+    public function setStorage(Storage $storage): Manager
     {
         $this->storage = $storage;
 
@@ -65,14 +67,14 @@ class Manager
 
     /**
      * @param Api $api
-     * @param TranslationStorage $storage
-     * @param Parser|null $parser
+     * @param Storage $storage
+     * @param Parser $parser
      */
-    public function __construct(Api $api, TranslationStorage $storage, Parser $parser = null)
+    public function __construct(Api $api, Storage $storage, Parser $parser)
     {
         $this->api = $api;
         $this->storage = $storage;
-        $this->parser = $parser ?? new Response\Parser();
+        $this->parser = $parser;
     }
 
     /**
@@ -92,7 +94,7 @@ class Manager
      */
     public function updateGroup(string $group, array $langs): void
     {
-        $this->storage->clearGroup($group, $langs);
+        $this->storage->clear($langs, $group);
         $params = [
             'langs' => implode(',', $langs),
             'tags' => $group
@@ -108,15 +110,12 @@ class Manager
     {
         $this->tracker !== null && $this->tracker->beforeStart();
         foreach ($this->getItemsBatch($params) as $batch) {
-            if ($this->storage instanceof BulkActions) {
+            if ($this->storage instanceof Bulk) {
                 $this->storage->bulkInsert($batch);
                 continue;
             }
-            foreach ($batch as $item) {
-                if (!isset($item['value']) && $item['value'] === null) {
-                    continue;
-                }
-                $this->storage->insert($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
+            foreach ($batch as $index => $item) {
+                $this->storage->insert($index, $item);
             }
         }
         $this->tracker !== null && $this->tracker->afterFinish();
@@ -135,7 +134,7 @@ class Manager
             $this->tracker !== null && $this->tracker->beforeBatch($page);
             try {
                 $resp = $this->api->fetch($params, $page);
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 throw new Exception('Failed to fetch ' . $page . ' page due to: ' .
                     $exception->getMessage(), $exception->getCode(), $exception);
             }

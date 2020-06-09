@@ -2,7 +2,7 @@
 
 namespace Translate\StorageManager\Contracts;
 
-interface TranslationStorage
+interface Storage
 {
     /**
      * @param string $index

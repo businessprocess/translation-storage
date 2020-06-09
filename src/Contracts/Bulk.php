@@ -2,12 +2,12 @@
 
 namespace Translate\StorageManager\Contracts;
 
-interface BulkActions
+interface Bulk
 {
     /**
      * @param array $data Compatible with [TranslationStorage::insert()]
      * @return bool
-     * @see TranslationStorage::insert()
+     * @see Storage::insert()
      */
     public function bulkInsert(array $data): bool;
 }

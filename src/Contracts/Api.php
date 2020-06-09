@@ -10,12 +10,7 @@ interface Api
      * @return array
      * ```php
      *  [
-     *      'items' => [
-     *          'key' => 'string|required',
-     *          'value' => 'string|required',
-     *          'lang' => 'string|required',
-     *          'group' => 'string|required'
-     *       ],
+     *      'items' => 'array|required',
      *      'meta' => [
      *          'totalPages' => 'int|required',
      *          'pageNum' => 'int|required'
