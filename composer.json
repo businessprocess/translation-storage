@@ -15,16 +15,21 @@
   "prefer-stable": true,
   "require": {
     "php": "^7.2",
-    "elasticsearch/elasticsearch": "^7.2",
-    "ext-mbstring": "*"
+    "elasticsearch/elasticsearch": "^7.2"
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "~2.1",
-    "guzzlehttp/guzzle": "~6.0"
+    "guzzlehttp/guzzle": "~6.0",
+    "pervozdanniy/translation-client": "^2.0"
   },
   "autoload": {
     "psr-4": {
       "Translate\\StorageManager\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
     }
   },
   "scripts": {

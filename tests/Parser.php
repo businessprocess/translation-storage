@@ -1,8 +1,9 @@
 <?php
 
+namespace Tests;
+
 class Parser extends \Translate\StorageManager\Response\Parser
 {
-
     /**
      * @inheritDoc
      */
@@ -10,21 +11,30 @@ class Parser extends \Translate\StorageManager\Response\Parser
     {
         $body = [];
         foreach ($response['items'] as $item) {
+            if (preg_match('/(?<group>[^.]*)\.\S*/', $item['key'], $matches) && in_array($matches['group'], $item['tags'], true)) {
+                $group = $matches['group'];
+                $item['key'] = str_replace($group . '.', '', $item['key']);
+            } else {
+                $group = reset($item['tags']);
+            }
+
             if (is_array($item['value'])) {
                 foreach ($item['value'] as $lang => $value) {
                     $body[] = [
-                        'key' => $item['key'],
+                        'id' => $item['key'],
+                        'index' => $group,
                         'value' => $value,
                         'lang' => $lang,
-                        'group' => reset($item['tags'])
+                        'tags' => $item['tags']
                     ];
                 }
             } else {
                 $body[] = [
-                    'key' => $item['key'],
+                    'id' => $item['key'],
+                    'index' => $group,
                     'value' => $item['value'],
                     'lang' => reset($response['meta']['langs']),
-                    'group' => reset($item['tags'])
+                    'tags' => $item['tags']
                 ];
             }
         }

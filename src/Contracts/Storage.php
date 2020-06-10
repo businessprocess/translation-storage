@@ -17,7 +17,7 @@ interface Storage
      * @param string|null $index
      * @return array|null
      */
-    public function find(string $id, string $lang, string $index = null): ?array;
+    public function find(string $index, string $id, string $lang): ?array;
 
     /**
      * @param array|null $langs

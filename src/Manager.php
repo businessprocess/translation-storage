@@ -95,11 +95,10 @@ class Manager
     public function updateGroup(string $group, array $langs): void
     {
         $this->storage->clear($langs, $group);
-        $params = [
+        $this->process([
             'langs' => implode(',', $langs),
             'tags' => $group
-        ];
-        $this->process($params);
+        ]);
     }
 
     /**
@@ -114,7 +113,9 @@ class Manager
                 $this->storage->bulkInsert($batch);
                 continue;
             }
-            foreach ($batch as $index => $item) {
+            foreach ($batch as $item) {
+                $index = $item['index'];
+                unset($item['index']);
                 $this->storage->insert($index, $item);
             }
         }

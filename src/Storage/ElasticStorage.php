@@ -8,7 +8,6 @@ use InvalidArgumentException;
 use Translate\StorageManager\Contracts\Bulk;
 use Translate\StorageManager\Contracts\Storage;
 use function array_key_exists;
-use function array_map;
 use function count;
 use function is_array;
 
@@ -64,11 +63,14 @@ class ElasticStorage implements Storage, Bulk
         }
         $indexName = $this->options['prefix'] . $name;
         foreach ($this->indices as $info) {
-            $info['index'] === $indexName && $this->client->indices()->create([
-                'index' => $indexName,
-                'body' => $config
-            ]);
+            if ($info['index'] === $indexName) {
+                return;
+            }
         }
+        $this->client->indices()->create([
+            'index' => $indexName,
+            'body' => $config
+        ]);
     }
 
     /**
@@ -84,7 +86,8 @@ class ElasticStorage implements Storage, Bulk
             'index' => $this->options['prefix'] . $index,
             'id' => $fields['lang'] . '.' . $fields['id'],
             'body' => [
-                'doc' => $fields
+                'doc' => $fields,
+                'doc_as_upsert' => true,
             ],
         ]);
 
@@ -94,11 +97,11 @@ class ElasticStorage implements Storage, Bulk
     /**
      * @inheritDoc
      */
-    public function find(string $id, string $lang, string $index = null): ?array
+    public function find(string $index, string $id, string $lang): ?array
     {
         try {
             $resp = $this->client->get([
-                'index' => $this->options['prefix'] . ($index ?? '*'),
+                'index' => $this->options['prefix'] . $index,
                 'id' => $lang . '.' . $id,
             ]);
         } catch (Missing404Exception $exception) {
@@ -122,7 +125,9 @@ class ElasticStorage implements Storage, Bulk
             'body' => $body,
         ]);
         $fetched = count($resp['hits']['hits']);
-        yield $this->processHits($resp['hits']['hits']);
+        foreach ($resp['hits']['hits'] as $hit) {
+            yield $hit['_source'];
+        }
         if ($fetched >= $resp['hits']['total']['value']) {
             return $fetched;
         }
@@ -131,24 +136,15 @@ class ElasticStorage implements Storage, Bulk
                 'scroll_id' => $resp['_scroll_id'],
                 'scroll' => $this->options['batchTimeout'],
             ]);
-            yield $this->processHits($resp['hits']['hits']);
+            foreach ($resp['hits']['hits'] as $hit) {
+                yield $hit['_source'];
+            }
         } while ($resp['hits']['total']['value'] > $fetched += count($resp['hits']['hits']));
         $this->client->clearScroll(['body' => [
             'scroll_id' => $resp['_scroll_id']
         ]]);
 
         return $fetched;
-    }
-
-    /**
-     * @param array $hits
-     * @return array
-     */
-    protected function processHits(array $hits): array
-    {
-        return array_map(static function (array $hit): array {
-            return $hit['_source'];
-        }, $hits);
     }
 
     /**
@@ -191,11 +187,12 @@ class ElasticStorage implements Storage, Bulk
             return true;
         }
         $body = [];
-        foreach ($data as $index => $item) {
+        foreach ($data as $item) {
             $body[] = ['index' => [
-                '_index' => $this->options['prefix'] . $index,
+                '_index' => $this->options['prefix'] . $item['index'],
                 '_id' => $item['lang'] . '.' . $item['id']
             ]];
+            unset($item['index']);
             $body[] = $item;
         }
         $resp = $this->client->bulk([
@@ -204,5 +201,12 @@ class ElasticStorage implements Storage, Bulk
         ]);
 
         return $resp['errors'] === false;
+    }
+
+    public function reset(): void
+    {
+        $this->client->indices()->delete([
+            'index' => $this->options['prefix'] . '*'
+        ]);
     }
 }
