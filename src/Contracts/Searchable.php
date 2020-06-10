@@ -1,6 +1,6 @@
 <?php
 
-namespace Translate\StorageManager\Contracts;
+namespace Pervozdanniy\TranslationStorage\Contracts;
 
 interface Searchable
 {

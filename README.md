@@ -40,7 +40,7 @@ composer update
 
 1. Create an api adapter
 ```php
-class ApiAdapter implements \Translate\StorageManager\Contracts\Api
+class ApiAdapter implements \Pervozdanniy\TranslationStorage\Contracts\Api
 {
     // MUST return data compatible with storage's data structure
     public function fetch(array $params = [], int $page = 1) : array
@@ -53,21 +53,23 @@ class ApiAdapter implements \Translate\StorageManager\Contracts\Api
 
 2. Initialize Storage Manager
 ```php
-/** @var \Translate\StorageManager\Contracts\Api $api */
+/** @var \Pervozdanniy\TranslationStorage\Contracts\Api $api */
 $api = new ApiAdapter();
+/** @var \Pervozdanniy\TranslationStorage\Contracts\Parser $parser */
+$parser = new Parser();
 
 $builder = \Elasticsearch\ClientBuilder::create();
 // set all options for elastic client you need
 $elastic = $builder->build();
-$storage = new \Translate\StorageManager\Storage\ElasticStorage($elastic);
-// you can pass any storage you want that implements \Translate\StorageManager\Contracts\TranslationStorage interface
-$manager = new \Translate\StorageManager\Manager($api, $storage);
+$storage = new \Pervozdanniy\TranslationStorage\Storage\Elastic\SimpleStorage($elastic);
+// you can pass any storage you want that implements \Pervozdanniy\TranslationStorage\Contracts\TranslationStorage interface
+$manager = new \Pervozdanniy\TranslationStorage\Manager\StaticManager($api, $storage, $parser);
 $manager->update(['en', 'es', 'ru']);
 ```
 
 3. Update your translations whenever you need
 ```php
-/** @var \Translate\StorageManager\Manager $manager*/
+/** @var \Pervozdanniy\TranslationStorage\Manager\StaticManager $manager*/
 //update all translation groups for specified languages
 $manager->update(['en', 'es', 'ru']);
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace Translate\StorageManager\Contracts;
+namespace Pervozdanniy\TranslationStorage\Contracts\Storage;
 
-interface Storage
+interface DynamicStorage
 {
     /**
      * @param string $index

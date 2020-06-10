@@ -1,8 +1,8 @@
 <?php
 
-namespace Translate\StorageManager\Response;
+namespace Pervozdanniy\TranslationStorage\Response;
 
-abstract class Parser implements \Translate\StorageManager\Contracts\Parser
+abstract class Parser implements \Pervozdanniy\TranslationStorage\Contracts\Parser
 {
     /**
      * @inheritDoc

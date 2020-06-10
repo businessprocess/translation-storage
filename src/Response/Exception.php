@@ -1,6 +1,6 @@
 <?php
 
-namespace Translate\StorageManager\Response;
+namespace Pervozdanniy\TranslationStorage\Response;
 
 class Exception extends \Exception
 {

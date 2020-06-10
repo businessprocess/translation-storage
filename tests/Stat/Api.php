@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests;
+namespace Pervozdanniy\TranslationStorage\Tests\Stat;
 
 use Translate\ApiClient;
 use Translate\Storage\ArrayStorage;
 
-class Api implements \Translate\StorageManager\Contracts\Api
+class Api implements \Pervozdanniy\TranslationStorage\Contracts\Api
 {
     private $http;
 

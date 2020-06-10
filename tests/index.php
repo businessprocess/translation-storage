@@ -2,10 +2,12 @@
 <?php
 
 use Elasticsearch\ClientBuilder;
-use Tests\Api;
-use Tests\Parser;
-use Translate\StorageManager\Manager;
-use Translate\StorageManager\Storage\ElasticStorage;
+use Pervozdanniy\TranslationStorage\Manager\DynamicManager;
+use Pervozdanniy\TranslationStorage\Storage\Elastic\SpreadIndexStorage;
+use Pervozdanniy\TranslationStorage\Tests\Dynamic\Api as DynamicApi;
+use Pervozdanniy\TranslationStorage\Tests\Dynamic\Parser as DynamicParser;
+use Pervozdanniy\TranslationStorage\Tests\Stat\Api as StaticApi;
+use Pervozdanniy\TranslationStorage\Tests\Stat\Parser as StaticParser;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -20,27 +22,47 @@ $builder->setHosts([[
 
 $client = $builder->build();
 
-$storage = new ElasticStorage($client, [
+$dynamicStorage = new SpreadIndexStorage($client, [
     'prefix' => 'pidor_',
     'batchSize' => 2000,
     'indices' => [
-        'test' => [
+        'db_spine_infractions' => [
             'mappings' => [
                 'dynamic' => false,
                 'properties' => [
                     'id' => ['type' => 'keyword'],
-                    'value' => ['type' => 'text', 'index_options' => 'freqs'],
                     'lang' => ['type' => 'keyword'],
-                    'group' => ['type' => 'keyword']
+                    'title' => ['type' => 'keyword']
+                ]
+            ]
+        ],
+        'db_amino_acids' => [
+            'mappings' => [
+                'dynamic' => false,
+                'properties' => [
+                    'id' => ['type' => 'keyword'],
+                    'lang' => ['type' => 'keyword'],
+                    'title' => ['type' => 'keyword'],
+                    'description' => ['type' => 'text']
                 ]
             ]
         ]
     ]
 ]);
 
+$staticStatic = new \Pervozdanniy\TranslationStorage\Storage\Elastic\SimpleStorage($client);
+$staticManager = new \Pervozdanniy\TranslationStorage\Manager\StaticManager(new StaticApi(), $staticStatic, new StaticParser());
+$staticManager->updateGroup('dynamic', ['ru', 'en', 'de']);
 
-$storage->reset();
+//$storage->reset();
+//exit;
 //var_dump(iterator_to_array($storage->fetch())); exit;
 
-$manager = new Manager(new Api, $storage, new Parser);
-$manager->update(['ru', 'en', 'de']);
+$manager = new DynamicManager(new DynamicApi, $dynamicStorage, new DynamicParser);
+$langs = array_values([
+    'ru' => 'ru',
+    'de' => 'de', 'en' => 'en', 'es' => 'es', 'el' => 'el', 'he' => 'he', 'it' => 'it', 'lt' => 'lt', 'mn' => 'mn',
+    'pl' => 'pl', 'ar' => 'ar', 'sr' => 'sr', 'uk' => 'uk', 'zh' => 'zh', 'tr' => 'tr'
+]);
+$manager->updateGroup('db_amino_acids', $langs);
+$manager->updateGroup('db_spine_infractions', $langs);

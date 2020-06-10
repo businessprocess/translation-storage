@@ -24,12 +24,12 @@
   },
   "autoload": {
     "psr-4": {
-      "Translate\\StorageManager\\": "src/"
+      "Pervozdanniy\\TranslationStorage\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Tests\\": "tests/"
+      "Pervozdanniy\\TranslationStorage\\Tests\\": "tests/"
     }
   },
   "scripts": {

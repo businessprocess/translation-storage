@@ -1,8 +1,8 @@
 <?php
 
-namespace Tests;
+namespace Pervozdanniy\TranslationStorage\Tests\Stat;
 
-class Parser extends \Translate\StorageManager\Response\Parser
+class Parser extends \Pervozdanniy\TranslationStorage\Response\Parser
 {
     /**
      * @inheritDoc
@@ -21,20 +21,18 @@ class Parser extends \Translate\StorageManager\Response\Parser
             if (is_array($item['value'])) {
                 foreach ($item['value'] as $lang => $value) {
                     $body[] = [
-                        'id' => $item['key'],
-                        'index' => $group,
+                        'key' => $item['key'],
                         'value' => $value,
                         'lang' => $lang,
-                        'tags' => $item['tags']
+                        'group' => $group
                     ];
                 }
             } else {
                 $body[] = [
-                    'id' => $item['key'],
-                    'index' => $group,
+                    'key' => $item['key'],
                     'value' => $item['value'],
                     'lang' => reset($response['meta']['langs']),
-                    'tags' => $item['tags']
+                    'group' => $group
                 ];
             }
         }

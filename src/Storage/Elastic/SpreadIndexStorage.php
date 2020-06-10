@@ -1,17 +1,17 @@
 <?php
 
-namespace Translate\StorageManager\Storage;
+namespace Pervozdanniy\TranslationStorage\Storage\Elastic;
 
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Missing404Exception;
 use InvalidArgumentException;
-use Translate\StorageManager\Contracts\Bulk;
-use Translate\StorageManager\Contracts\Storage;
+use Pervozdanniy\TranslationStorage\Contracts\Bulk;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\DynamicStorage;
 use function array_key_exists;
 use function count;
 use function is_array;
 
-class ElasticStorage implements Storage, Bulk
+class SpreadIndexStorage implements DynamicStorage, Bulk
 {
     /**
      * @var Client
@@ -188,12 +188,12 @@ class ElasticStorage implements Storage, Bulk
         }
         $body = [];
         foreach ($data as $item) {
-            $body[] = ['index' => [
+            $body[] = ['update' => [
                 '_index' => $this->options['prefix'] . $item['index'],
                 '_id' => $item['lang'] . '.' . $item['id']
             ]];
             unset($item['index']);
-            $body[] = $item;
+            $body[] = ['doc' => $item, 'doc_as_upsert' => true];
         }
         $resp = $this->client->bulk([
             'refresh' => $this->options['refresh'],

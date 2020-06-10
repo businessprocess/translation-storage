@@ -1,14 +1,15 @@
 <?php
 
-namespace Translate\StorageManager\Contracts;
+namespace Pervozdanniy\TranslationStorage\Contracts;
 
 interface Parser
 {
     /**
-     * Returns array of items, compatible with [TranslationStorage::insert()]
+     * Returns array of items, compatible with your storage interface [insert()] method
      * @param array $response
      * @return array index => item pairs
-     * @see Storage::insert()
+     * @see DynamicStorage::insert()
+     * @see StaticStorage::insert()
      */
     public function parseBody(array $response): array;
 
