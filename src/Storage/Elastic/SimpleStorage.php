@@ -3,11 +3,11 @@
 namespace Pervozdanniy\TranslationStorage\Storage\Elastic;
 
 use Elasticsearch\Client;
-use Pervozdanniy\TranslationStorage\Contracts\Bulk;
-use Pervozdanniy\TranslationStorage\Contracts\Searchable;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Bulkable;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Searchable;
 use Pervozdanniy\TranslationStorage\Contracts\Storage\StaticStorage;
 
-class SimpleStorage implements StaticStorage, Bulk, Searchable
+class SimpleStorage implements StaticStorage, Bulkable, Searchable
 {
     protected const DEFAULT_BATCH_SIZE = 500;
 
@@ -61,11 +61,10 @@ class SimpleStorage implements StaticStorage, Bulk, Searchable
     /**
      * @inheritDoc
      */
-    public function insert(string $key, string $value, string $lang, string $group = null): bool
+    public function set(string $key, string $value, string $lang, string $group = null): bool
     {
         $update = $this->client->updateByQuery([
             'index' => $this->options['indexName'],
-            // 'refresh' => $this->options['refresh'] !== false,
             'body' => [
                 'query' => [
                     'bool' => [

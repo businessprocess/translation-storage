@@ -9,7 +9,7 @@ interface DynamicStorage
      * @param array $fields Associative array of key => value pairs
      * @return bool
      */
-    public function insert(string $index, array $fields): bool;
+    public function set(string $index, array $fields): bool;
 
     /**
      * @param string $id

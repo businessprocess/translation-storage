@@ -5,13 +5,14 @@ namespace Pervozdanniy\TranslationStorage\Storage\Elastic;
 use Elasticsearch\Client;
 use Elasticsearch\Common\Exceptions\Missing404Exception;
 use InvalidArgumentException;
-use Pervozdanniy\TranslationStorage\Contracts\Bulk;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Bulkable;
 use Pervozdanniy\TranslationStorage\Contracts\Storage\DynamicStorage;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Updateable;
 use function array_key_exists;
 use function count;
 use function is_array;
 
-class SpreadIndexStorage implements DynamicStorage, Bulk
+class SpreadIndexStorage implements DynamicStorage, Bulkable, Updateable
 {
     /**
      * @var Client
@@ -76,7 +77,7 @@ class SpreadIndexStorage implements DynamicStorage, Bulk
     /**
      * @inheritDoc
      */
-    public function insert(string $index, array $fields): bool
+    public function set(string $index, array $fields): bool
     {
         if (!array_key_exists('id', $fields) || !array_key_exists('lang', $fields)) {
             throw new InvalidArgumentException('$fields MUST contain both \'id\' and \'lang\' keys');

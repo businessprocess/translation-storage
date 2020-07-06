@@ -3,9 +3,10 @@
 namespace Pervozdanniy\TranslationStorage\Manager;
 
 use Pervozdanniy\TranslationStorage\Contracts\Api;
-use Pervozdanniy\TranslationStorage\Contracts\Bulk;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Bulkable;
 use Pervozdanniy\TranslationStorage\Contracts\Parser;
 use Pervozdanniy\TranslationStorage\Contracts\Storage\StaticStorage;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Updateable;
 use Pervozdanniy\TranslationStorage\Response\Exception;
 
 class StaticManager extends Base
@@ -51,7 +52,9 @@ class StaticManager extends Base
      */
     public function update(array $langs): void
     {
-        $this->storage->clear($langs);
+        if (!$this->storage instanceof Updateable) {
+            $this->storage->clear($langs);
+        }
         $this->process(['langs' => implode(',', $langs)]);
     }
 
@@ -62,7 +65,9 @@ class StaticManager extends Base
      */
     public function updateGroup(string $group, array $langs): void
     {
-        $this->storage->clearGroup($group, $langs);
+        if (!$this->storage instanceof Updateable) {
+            $this->storage->clearGroup($group, $langs);
+        }
         $params = [
             'langs' => implode(',', $langs),
             'tags' => $group
@@ -75,7 +80,7 @@ class StaticManager extends Base
      */
     protected function insertBatch(array $batch): void
     {
-        if ($this->storage instanceof Bulk) {
+        if ($this->storage instanceof Bulkable) {
             $this->storage->bulkInsert($batch);
             return;
         }
@@ -83,7 +88,7 @@ class StaticManager extends Base
             if (!isset($item['value']) && $item['value'] === null) {
                 continue;
             }
-            $this->storage->insert($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
+            $this->storage->set($item['key'], $item['value'], $item['lang'], $item['group'] ?? null);
         }
     }
 }

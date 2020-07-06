@@ -2,13 +2,12 @@
 
 namespace Pervozdanniy\TranslationStorage\Contracts;
 
-interface Searchable
+/**
+ * Interface Searchable
+ * @package Pervozdanniy\TranslationStorage\Contracts
+ * @deprecated
+ * @see \Pervozdanniy\TranslationStorage\Contracts\Storage\Searchable
+ */
+interface Searchable extends \Pervozdanniy\TranslationStorage\Contracts\Storage\Searchable
 {
-    /**
-     * @param string $query
-     * @param string $lang
-     * @param string|null $group
-     * @return string[] Translation keys
-     */
-    public function search(string $query, string $lang, string $group = null): array;
 }

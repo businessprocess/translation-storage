@@ -8,8 +8,8 @@ interface Parser
      * Returns array of items, compatible with your storage interface [insert()] method
      * @param array $response
      * @return array index => item pairs
-     * @see DynamicStorage::insert()
-     * @see StaticStorage::insert()
+     * @see DynamicStorage::set()
+     * @see StaticStorage::set()
      */
     public function parseBody(array $response): array;
 

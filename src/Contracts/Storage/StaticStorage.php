@@ -11,7 +11,7 @@ interface StaticStorage
      * @param string $group
      * @return bool
      */
-    public function insert(string $key, string $value, string $lang, string $group): bool;
+    public function set(string $key, string $value, string $lang, string $group): bool;
 
     /**
      * @param string $key

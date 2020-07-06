@@ -3,9 +3,10 @@
 namespace Pervozdanniy\TranslationStorage\Manager;
 
 use Pervozdanniy\TranslationStorage\Contracts\Api;
-use Pervozdanniy\TranslationStorage\Contracts\Bulk;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Bulkable;
 use Pervozdanniy\TranslationStorage\Contracts\Parser;
 use Pervozdanniy\TranslationStorage\Contracts\Storage\DynamicStorage;
+use Pervozdanniy\TranslationStorage\Contracts\Storage\Updateable;
 use Pervozdanniy\TranslationStorage\Response\Exception;
 use function implode;
 
@@ -52,7 +53,9 @@ class DynamicManager extends Base
      */
     public function update(array $langs): void
     {
-        $this->storage->clear($langs);
+        if (!$this->storage instanceof Updateable) {
+            $this->storage->clear($langs);
+        }
         $this->process(['langs' => implode(',', $langs)]);
     }
 
@@ -63,7 +66,9 @@ class DynamicManager extends Base
      */
     public function updateGroup(string $group, array $langs): void
     {
-        $this->storage->clear($langs, $group);
+        if (!$this->storage instanceof Updateable) {
+            $this->storage->clear($langs, $group);
+        }
         $this->process([
             'langs' => implode(',', $langs),
             'tags' => $group
@@ -75,14 +80,14 @@ class DynamicManager extends Base
      */
     protected function insertBatch(array $batch): void
     {
-        if ($this->storage instanceof Bulk) {
+        if ($this->storage instanceof Bulkable) {
             $this->storage->bulkInsert($batch);
             return;
         }
         foreach ($batch as $item) {
             $index = $item['index'];
             unset($item['index']);
-            $this->storage->insert($index, $item);
+            $this->storage->set($index, $item);
         }
     }
 }

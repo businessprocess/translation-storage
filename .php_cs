@@ -4,6 +4,7 @@ $finder = PhpCsFixer\Finder::create()
     ->name('*.php')
     ->ignoreDotFiles(true)
     ->ignoreVCS(true);
+
 return PhpCsFixer\Config::create()
     ->setUsingCache(true)
     ->setRules([
